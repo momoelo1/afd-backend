@@ -1,0 +1,12 @@
+GET http://localhost:3001/api/users
+
+###
+
+POST http://localhost:3001/api/users HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "elo",
+    "email": "moad.elomari94@gmail.com",
+    "password": "elo"
+}
