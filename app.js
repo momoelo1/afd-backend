@@ -59,7 +59,7 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
-    status: 'OK', 
+    status: 'ciao momo', 
     timestamp: new Date().toISOString(),
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
