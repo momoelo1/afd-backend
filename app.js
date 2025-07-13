@@ -32,7 +32,9 @@ app.use(
       "http://localhost:5173", 
       "http://192.168.118.135:5173",
       "https://*.railway.app",
-      "https://*.up.railway.app"
+      "https://*.up.railway.app",
+      "https://momoelo1.github.io",
+      "https://*.github.io"
     ],
     credentials: true,
   })
