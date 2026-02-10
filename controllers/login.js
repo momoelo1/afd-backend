@@ -6,18 +6,12 @@ const { generateToken, storeRefreshToken, setCookies } = require("./auth");
 const config = require("../utils/config");
 
 loginRouter.post("/", async (req, res) => {
-  console.log('body', req.body);
-  console.log('cookie', req.cookies);
-  
-  
   try {
     const { username, email, password } = req.body;
     const user = await User.findOne({ email });
 
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      console.log(user._id);
-
       const { accessToken, refreshToken } = generateToken(user._id);
       await storeRefreshToken(user._id, refreshToken);
       setCookies(res, accessToken, refreshToken);

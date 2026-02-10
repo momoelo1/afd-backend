@@ -2,19 +2,11 @@ const checkoutRouter = require("express").Router();
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const Cart = require("../models/Cart");
 const User = require("../models/User");
-const jwt = require("jsonwebtoken");
-const config = require("../utils/config");
+const { tokenExtractor } = require("../utils/middleware");
 
-checkoutRouter.post("/create-checkout-session", async (req, res) => {
+checkoutRouter.post("/create-checkout-session", tokenExtractor, async (req, res) => {
   try {
-    const accessToken = req.cookies.accessToken;
-
-    if (!accessToken) {
-      return res.status(401).json({ error: "No access token provided" });
-    }
-
-    const decodedToken = jwt.verify(accessToken, process.env.SECRET);
-    const user = await User.findById(decodedToken.userId).populate("cartItems");
+    const user = await req.user.populate("cartItems");
 
     if (!user) {
       console.log("error user");

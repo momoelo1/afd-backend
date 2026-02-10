@@ -1,7 +1,7 @@
 const productRouter = require("express").Router();
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
-// Get all products grouped by category
+
 productRouter.get("/", async (req, res) => {
   try {
     const products = await stripe.products.list({
@@ -13,7 +13,7 @@ productRouter.get("/", async (req, res) => {
       (product) => product.active === true
     );
 
-    // Group products by category
+
     const groupedProducts = activeProds.reduce((acc, product) => {
       const category = product.metadata.category || 'uncategorized';
       if (!acc[category]) {
@@ -34,7 +34,7 @@ productRouter.get("/", async (req, res) => {
   }
 });
 
-// Get products by specific category
+
 productRouter.get("/category/:category", async (req, res) => {
   try {
     const { category } = req.params;
@@ -71,7 +71,7 @@ productRouter.get("/categories", async (req, res) => {
   }
 });
 
-// Get specific product by ID
+
 productRouter.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;

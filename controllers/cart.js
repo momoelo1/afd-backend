@@ -4,62 +4,45 @@ const Cart = require("../models/Cart");
 const cartRouter = require("express").Router();
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
-const config = require("../utils/config");
+const { tokenExtractor } = require("../utils/middleware");
 
 /**********  GET CART PRODUCTS  **********/
 
-cartRouter.get("/", async (req, res) => {
-  const accessToken = req.cookies.accessToken;
-
-  const decodedToken = jwt.verify(accessToken, process.env.SECRET);
-
-  const user = await User.findById(decodedToken.userId).populate("cartItems");
-  console.log("us", user._id.toString());
-
+cartRouter.get("/", tokenExtractor, async (req, res) => {
+  const user = await req.user.populate("cartItems");
   const cart = await Cart.find({ userId: user._id });
-
   res.json(cart);
 });
 
-cartRouter.get("/:id", async (req, res) => {
+cartRouter.get("/:id", tokenExtractor, async (req, res) => {
+  const { id } = req.params;
+  const user = await req.user.populate("cartItems");
 
-  const { id } = req.params
-  console.log(id);
+  const singleItem = await Cart.findOne({
+    _id: id,
+    userId: user._id,
+  });
 
-  const accessToken = req.cookies.accessToken;
+  if (!singleItem) {
+    return res.status(404).json({ error: "Cart item not found" });
+  }
 
-  const decodedToken = jwt.verify(accessToken, config.SECRET);
-
-  const user = await User.findById(decodedToken.userId).populate("cartItems");
-  
-  const singleItem = await Cart.findById({_id: id})
-  console.log(singleItem);
-
-  res.json(singleItem)
-  
+  res.json(singleItem);
 });
 
 /**********  POST PRODUCTS TO CART  **********/
 
-cartRouter.post("/", async (req, res) => {
+cartRouter.post("/", tokenExtractor, async (req, res) => {
   try {
   const { productId, quantity } = req.body;
     console.log('Received request to add product:', { productId, quantity });
 
-  const accessToken = req.cookies.accessToken;
-  if (!accessToken) {
-    return res.status(401).json({ error: "Access token is missing" });
-  }
-
-  const decodedToken = jwt.verify(accessToken, config.SECRET);
-    console.log('User ID from token:', decodedToken.userId);
-
-  const user = await User.findById(decodedToken.userId).populate("cartItems");
+  const user = await req.user.populate("cartItems");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Debug user's cart state
+
     console.log('Current user cart state:', {
       userId: user._id,
       username: user.username,
@@ -67,7 +50,7 @@ cartRouter.post("/", async (req, res) => {
       cartItemIds: user.cartItems.map(item => item._id)
     });
 
-    // Clean up any invalid cart references
+
     const validCartItems = await Cart.find({ _id: { $in: user.cartItems } });
     const validCartItemIds = validCartItems.map(item => item._id.toString());
     
@@ -80,7 +63,6 @@ cartRouter.post("/", async (req, res) => {
       console.log('Cart references cleaned up');
     }
 
-    // Find if the product already exists in the user's cart
     const existingCartItem = await Cart.findOne({
       userId: user._id,
       productId: productId
@@ -158,8 +140,7 @@ cartRouter.post("/", async (req, res) => {
         itemId: updatedCartItem._id,
         productId: updatedCartItem.productId
       });
-      
-      // Ensure we're not adding duplicate references
+
       if (!user.cartItems.includes(updatedCartItem._id)) {
         user.cartItems.push(updatedCartItem);
         await user.save();
@@ -167,7 +148,7 @@ cartRouter.post("/", async (req, res) => {
       }
     }
 
-    // Get the updated cart items
+
     const updatedCart = await Cart.find({ userId: user._id });
     console.log('Returning updated cart:', {
       itemCount: updatedCart.length,
@@ -184,7 +165,7 @@ cartRouter.post("/", async (req, res) => {
     console.error('Cart operation error:', {
       error: error.message,
       stack: error.stack,
-      userId: req.cookies.accessToken ? jwt.decode(req.cookies.accessToken).userId : 'unknown'
+      userId: req.user ? req.user._id.toString() : 'unknown'
     });
     return res.status(500).json({ 
       error: "Failed to add product to cart",
@@ -193,18 +174,11 @@ cartRouter.post("/", async (req, res) => {
   }
 });
 
-cartRouter.delete("/", async (req, res) => {
+cartRouter.delete("/", tokenExtractor, async (req, res) => {
   const { productId } = req.body;
   console.log(productId);
 
-  const accessToken = req.cookies.accessToken;
-  if (!accessToken) {
-    return res.status(401).json({ error: "Access token is missing" });
-  }
-
-  const decodedToken = jwt.verify(accessToken, config.SECRET);
-
-  const user = await User.findById(decodedToken.userId).populate("cartItems");
+  const user = await req.user.populate("cartItems");
 
   const existingItem = user.cartItems.find(
     (item) => item.productId === productId

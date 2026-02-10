@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const userRouter = require("express").Router();
 const User = require("../models/User");
-const crypto = require("crypto");
+const { optionalTokenExtractor } = require("../utils/middleware");
 
 userRouter.post("/", async (req, res) => {
   const { username, email, password } = req.body;
@@ -13,9 +13,6 @@ userRouter.post("/", async (req, res) => {
     email,
     passwordHash,
   });
-  console.log('user', user);
-  
-
   const userExist = await User.findOne({ email });
 
   if (userExist) {
@@ -29,20 +26,27 @@ userRouter.post("/", async (req, res) => {
   }
 
   const savedUser = await user.save();
-  
+
   res.status(201).json(savedUser);
 });
 
-userRouter.get("/", async (req, res) => {
-  const user = await User.find({}).populate("cartItems", {
+// Optional auth route: returns users if authenticated, empty array if not
+userRouter.get("/", optionalTokenExtractor, async (req, res) => {
+  // If user is authenticated, return users (consider restricting to admins in future)
+  // If not authenticated, return empty array to prevent info disclosure
+  if (!req.user) {
+    return res.status(200).json([]);
+  }
+
+  const users = await User.find({}).populate("cartItems", {
     userId: 1,
     productId: 1,
     name: 1,
     desc: 1,
     img: 1,
-    quantity: 1
+    quantity: 1,
   });
-  res.status(200).json(user);
+  res.status(200).json(users);
 });
 
 module.exports = userRouter;

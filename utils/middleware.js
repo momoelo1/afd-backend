@@ -2,38 +2,48 @@ const jwt = require("jsonwebtoken");
 const logger = require("./logger");
 const User = require("../models/User");
 
-const getTokenFrom = async (req, res) => {
-  const accessCookie = req.cookies.accessToken;
+const getTokenFrom = async (req) => {
+  const accessCookie = req.cookies?.accessToken;
 
-  if (accessCookie) {
+  if (!accessCookie) {
+    return null;
+  }
+
+  try {
     const decodedToken = jwt.verify(accessCookie, process.env.SECRET);
 
-    if (decodedToken) {
-      return (req.user = await User.findById(decodedToken.userId));
-    }
-    if (!decodedToken) {
+    if (!decodedToken || !decodedToken.userId) {
       return null;
     }
-  } else {
+
+    const user = await User.findById(decodedToken.userId);
+    return user || null;
+  } catch (error) {
+    logger.error("Failed to verify access token", error);
     return null;
   }
 };
 
 const getUserTokenFrom = async (token) => {
-  if (token === null) {
+  if (!token) {
     return null;
   }
 
-  const decodedToken = jwt.verify(token, process.env.SECRET);
-
-  return await User.findById(decodedToken.id);
+  try {
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+    if (!decodedToken || !decodedToken.id) {
+      return null;
+    }
+    const user = await User.findById(decodedToken.id);
+    return user || null;
+  } catch (error) {
+    logger.error("Failed to verify user token", error);
+    return null;
+  }
 };
 
 const requestLogger = (req, res, next) => {
-  logger.info("Method: ", req.method);
-  logger.info("Path: ", req.path);
-  logger.info("Body: ", req.body);
-  logger.info("---");
+  logger.info("Method:", req.method, "Path:", req.path);
   next();
 };
 
@@ -60,7 +70,19 @@ const errorHandler = (error, req, res, next) => {
 
 const tokenExtractor = async (req, res, next) => {
   const user = await getTokenFrom(req);
+
+  if (!user) {
+    return res.status(401).json({ error: "authentication required" });
+  }
+
   req.user = user;
+  next();
+};
+
+// Optional token extractor - doesn't fail if no token, just sets req.user to null
+const optionalTokenExtractor = async (req, res, next) => {
+  const user = await getTokenFrom(req);
+  req.user = user || null;
   next();
 };
 
@@ -69,4 +91,7 @@ module.exports = {
   errorHandler,
   unknownEndpoint,
   tokenExtractor,
+  optionalTokenExtractor,
+  getTokenFrom,
+  getUserTokenFrom,
 };

@@ -3,11 +3,13 @@ const express = require("express");
 const app = express();
 require("express-async-errors");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const userRouter = require("./controllers/users");
 const loginRouter = require("./controllers/login");
 const productRouter = require("./controllers/product");
 const cartRouter = require("./controllers/cart");
-const checkoutRouter = require('./controllers/checkout')
+const checkoutRouter = require("./controllers/checkout");
 const middleware = require("./utils/middleware");
 const logger = require("./utils/logger");
 const mongoose = require("mongoose");
@@ -22,24 +24,39 @@ mongoose
     logger.info("connected to mongoDB");
   })
   .catch((e) => {
-    logger.error("error connecting to mongoDB");
+    logger.error("error connecting to mongoDB", e);
     process.exit(1);
   });
 
 app.use(
   cors({
     origin: [
-      "http://localhost:5173", 
-      "http://192.168.118.135:5173",
-      "https://*.railway.app",
-      "https://*.up.railway.app",
+      "http://localhost:5173",
+      "http://192.168.1.58:5173",
+      "http://192.168.1.52:5173",
+      "http://192.168.1.55:5173",
+      "http://192.168.1.56:5173",
+      "http://192.168.235.135:5173",
+      "http://192.168.0.175:5173",
+      "http://192.168.167.135:5173",
       "https://momoelo1.github.io",
-      "https://*.github.io"
     ],
     credentials: true,
   })
 );
-app.use(express.json());
+
+// Security middlewares
+app.use(helmet());
+app.use(
+  express.json({
+    limit: "10kb",
+  })
+);
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+app.use("/api", apiLimiter);
 app.use(middleware.requestLogger);
 
 app.use((req, res, next) => {
@@ -50,37 +67,30 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cookieParser());
-// app.use(middleware.tokenExtractor);
-
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`[DEBUG] ${req.method} ${req.path} - ${new Date().toISOString()}`);
-  next();
-});
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ciao momo', 
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
     timestamp: new Date().toISOString(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    mongodb:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
 });
 
 // Test endpoint to check if routes are working
-app.get('/test', (req, res) => {
-  res.status(200).json({ 
-    message: 'Test endpoint working',
-    timestamp: new Date().toISOString()
+app.get("/test", (req, res) => {
+  res.status(200).json({
+    message: "Test endpoint working",
+    timestamp: new Date().toISOString(),
   });
 });
 
-/* usersExtractor and userExtractor blocking the backend with a JsonWeTokeError. do not use it */
 app.use("/api/cart", cartRouter);
 app.use("/api/users", userRouter);
 app.use("/api/login", loginRouter);
 app.use("/api/products", productRouter);
-app.use('/api/checkout', checkoutRouter)
+app.use("/api/checkout", checkoutRouter);
 
 // app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);
