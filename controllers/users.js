@@ -1,8 +1,6 @@
 const bcrypt = require("bcrypt");
 const userRouter = require("express").Router();
 const User = require("../models/User");
-const { optionalTokenExtractor } = require("../utils/middleware");
-
 userRouter.post("/", async (req, res) => {
   const { username, email, password } = req.body;
   const saltRounds = 10;
@@ -30,14 +28,7 @@ userRouter.post("/", async (req, res) => {
   res.status(201).json(savedUser);
 });
 
-// Optional auth route: returns users if authenticated, empty array if not
-userRouter.get("/", optionalTokenExtractor, async (req, res) => {
-  // If user is authenticated, return users (consider restricting to admins in future)
-  // If not authenticated, return empty array to prevent info disclosure
-  if (!req.user) {
-    return res.status(200).json([]);
-  }
-
+userRouter.get("/", async (req, res) => {
   const users = await User.find({}).populate("cartItems", {
     userId: 1,
     productId: 1,
