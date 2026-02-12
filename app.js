@@ -40,6 +40,7 @@ app.use(
       "http://192.168.0.175:5173",
       "http://192.168.167.135:5173",
       "https://momoelo1.github.io",
+      "https://p01--afd-backend--288t4d4hml72.code.run"
     ],
     credentials: true,
   })
