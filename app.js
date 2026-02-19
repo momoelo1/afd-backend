@@ -32,6 +32,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "http://172.20.10.2:5173",
       "http://192.168.1.58:5173",
       "http://192.168.1.52:5173",
       "http://192.168.1.55:5173",
@@ -40,10 +41,9 @@ app.use(
       "http://192.168.0.175:5173",
       "http://192.168.167.135:5173",
       "https://momoelo1.github.io",
-      "https://p01--afd-backend--288t4d4hml72.code.run"
     ],
     credentials: true,
-  })
+  }),
 );
 
 // Security middlewares
@@ -51,7 +51,7 @@ app.use(helmet());
 app.use(
   express.json({
     limit: "10kb",
-  })
+  }),
 );
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -63,7 +63,7 @@ app.use(middleware.requestLogger);
 app.use((req, res, next) => {
   res.header(
     "Set-Cookie",
-    "__stripe_mid=; Max-Age=0; Path=/; HttpOnly=True; SameSite=Strict"
+    "__stripe_mid=; Max-Age=0; Path=/; HttpOnly=True; SameSite=Strict",
   );
   next();
 });
